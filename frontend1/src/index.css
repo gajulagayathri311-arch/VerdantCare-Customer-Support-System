@@ -1,0 +1,295 @@
+/* =========================================================
+   VERDANTCARE CUSTOMER SUPPORT MANAGEMENT SYSTEM
+   Color Palette: Warm Beige & Refined Olive Green
+   ========================================================= */
+
+:root {
+  /* Olive Green Shades */
+  --olive-950: #1c2715;
+  --olive-900: #26351d;
+  --olive-800: #354728;
+  --olive-700: #465c35;
+  --olive-600: #567142;
+  --olive-500: #6b8a53;
+  --olive-400: #8da976;
+  --olive-300: #b0c69d;
+  --olive-200: #d4e2c7;
+  --olive-100: #e8f0df;
+  --olive-50: #f4f8ef;
+
+  /* Warm Beige / Sand / Linen Shades */
+  --beige-900: #564d3f;
+  --beige-800: #7c705e;
+  --beige-700: #a29480;
+  --beige-600: #c5b9a6;
+  --beige-400: #ddd4c5;
+  --beige-300: #e8e2d5;
+  --beige-200: #f0eae0;
+  --beige-100: #f7f3ec;
+  --beige-50: #fbf9f5;
+  --surface-white: #ffffff;
+
+  /* Typography & Theme Tokens */
+  --text-main: #21291c;
+  --text-body: #47533f;
+  --text-muted: #74806c;
+  --text-inverse: #ffffff;
+
+  --border-color: #e3dcce;
+  --border-focus: #567142;
+
+  --status-open-bg: #fdf5e6;
+  --status-open-text: #96610b;
+  --status-open-border: #f3d79b;
+
+  --status-progress-bg: #eaf1fb;
+  --status-progress-text: #2159a6;
+  --status-progress-border: #bcd5f7;
+
+  --status-resolved-bg: #edf6eb;
+  --status-resolved-text: #2e6922;
+  --status-resolved-border: #bce3b4;
+
+  --status-high-bg: #fdf0ed;
+  --status-high-text: #a82e18;
+  --status-high-border: #f8c7bf;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  --shadow-sm: 0 1px 3px rgba(38, 53, 29, 0.06);
+  --shadow-md: 0 6px 16px -2px rgba(38, 53, 29, 0.08), 0 2px 6px -1px rgba(38, 53, 29, 0.04);
+  --shadow-lg: 0 16px 32px -4px rgba(38, 53, 29, 0.12), 0 6px 12px -2px rgba(38, 53, 29, 0.05);
+
+  --font-sans: 'Segoe UI', system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  min-height: 100%;
+  font-family: var(--font-sans);
+  background-color: var(--beige-50);
+  color: var(--text-body);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Remove Vite root restrictions so layout is fluid and full width */
+#root {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  text-align: left !important;
+  border-inline: none !important;
+  background-color: var(--beige-50);
+}
+
+a {
+  color: var(--olive-700);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--olive-900);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-main);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+/* Utility buttons */
+button {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  outline: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-primary {
+  background-color: var(--olive-700);
+  color: var(--surface-white);
+  padding: 10px 20px;
+  border: 1px solid var(--olive-800);
+  box-shadow: 0 2px 6px rgba(53, 71, 40, 0.2);
+}
+
+.btn-primary:hover {
+  background-color: var(--olive-800);
+  box-shadow: 0 4px 10px rgba(53, 71, 40, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background-color: var(--beige-200);
+  color: var(--olive-900);
+  padding: 10px 18px;
+  border: 1px solid var(--beige-400);
+}
+
+.btn-secondary:hover {
+  background-color: var(--beige-300);
+  border-color: var(--beige-600);
+}
+
+.btn-outline-olive {
+  background-color: transparent;
+  color: var(--olive-700);
+  border: 1.5px solid var(--olive-600);
+  padding: 9px 18px;
+}
+
+.btn-outline-olive:hover {
+  background-color: var(--olive-100);
+  color: var(--olive-900);
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.btn-lg {
+  padding: 14px 28px;
+  font-size: 16px;
+  border-radius: var(--radius-lg);
+}
+
+/* Input & Form Controls in Beige / Olive */
+input, select, textarea {
+  width: 100%;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text-main);
+  background-color: var(--surface-white);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 11px 14px;
+  transition: all 0.2s ease;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--olive-600);
+  box-shadow: 0 0 0 3px rgba(86, 113, 66, 0.15);
+  background-color: #ffffff;
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Status Badges */
+.badge-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-open {
+  background-color: var(--status-open-bg);
+  color: var(--status-open-text);
+  border: 1px solid var(--status-open-border);
+}
+
+.badge-in_progress {
+  background-color: var(--status-progress-bg);
+  color: var(--status-progress-text);
+  border: 1px solid var(--status-progress-border);
+}
+
+.badge-resolved {
+  background-color: var(--status-resolved-bg);
+  color: var(--status-resolved-text);
+  border: 1px solid var(--status-resolved-border);
+}
+
+.badge-closed {
+  background-color: var(--beige-200);
+  color: var(--beige-900);
+  border: 1px solid var(--beige-400);
+}
+
+.badge-priority {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  display: inline-block;
+}
+
+.priority-high {
+  background-color: var(--status-high-bg);
+  color: var(--status-high-text);
+  border: 1px solid var(--status-high-border);
+}
+
+.priority-medium {
+  background-color: var(--status-open-bg);
+  color: var(--status-open-text);
+  border: 1px solid var(--status-open-border);
+}
+
+.priority-low {
+  background-color: var(--olive-100);
+  color: var(--olive-800);
+  border: 1px solid var(--olive-200);
+}
+
+/* Common App Layout */
+.app-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-wrapper {
+  flex: 1;
+  max-width: 1280px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease forwards;
+}

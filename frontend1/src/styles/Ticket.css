@@ -1,0 +1,108 @@
+/* Ticket components styles in Olive & Beige */
+.ticket-form-container {
+  max-width: 800px;
+  margin: 30px auto;
+  padding: 0 16px;
+}
+
+.ticket-form {
+  background-color: var(--surface-white);
+  padding: 36px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-md);
+}
+
+.tickets-container {
+  max-width: 1100px;
+  margin: 30px auto;
+  padding: 0 16px;
+}
+
+.ticket-card {
+  background-color: var(--surface-white);
+  padding: 24px 28px;
+  margin-bottom: 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s;
+}
+
+.ticket-card:hover {
+  border-color: var(--olive-400);
+  box-shadow: var(--shadow-md);
+}
+
+.ticket-card h3 {
+  color: var(--olive-950);
+  margin-bottom: 8px;
+  font-size: 18px;
+}
+
+.ticket-card p {
+  color: var(--text-body);
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 6px;
+}
+
+.view-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 8px 16px;
+  background-color: var(--olive-700);
+  color: #ffffff;
+  text-decoration: none;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+.view-button:hover {
+  background-color: var(--olive-800);
+  color: #ffffff;
+}
+
+.ticket-details {
+  max-width: 960px;
+  margin: 30px auto;
+  padding: 0 16px;
+}
+
+.detail-box {
+  background-color: var(--surface-white);
+  padding: 32px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-md);
+}
+
+.admin-ticket-card {
+  background-color: var(--surface-white);
+  padding: 24px;
+  margin: 16px 0;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.empty-message {
+  background-color: var(--surface-white);
+  padding: 48px;
+  text-align: center;
+  border-radius: var(--radius-lg);
+  border: 1px dashed var(--beige-400);
+  color: var(--text-muted);
+}
+
+.loading {
+  text-align: center;
+  padding: 80px 20px;
+  font-size: 16px;
+  color: var(--olive-700);
+  font-weight: 600;
+}

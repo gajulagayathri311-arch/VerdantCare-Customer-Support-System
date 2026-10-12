@@ -1,0 +1,47 @@
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+backend/dist/
+frontend1/dist/
+
+# Local files
+*.local
+.DS_Store
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+frontend1/.env
+frontend1/.env.*
+!frontend1/.env.example
+
+# Editor files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Exclude unrelated projects and archive
+/backend customer zip.zip
+/frontend/
+/my-second-app/
+/vite-project/

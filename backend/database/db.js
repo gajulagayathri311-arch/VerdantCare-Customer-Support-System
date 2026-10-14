@@ -12,7 +12,7 @@ const __dirname = path.dirname(__filename);
 const dbConfig = {
   host: process.env.DB_HOST || "localhost",
   user: process.env.DB_USER || "root",
-  password: process.env.DB_PASSWORD || "",
+  password: process.env.DB_PASSWORD !== undefined ? process.env.DB_PASSWORD : "root",
   database: process.env.DB_NAME || "customer_support_db",
   port: Number(process.env.DB_PORT) || 3306,
   waitForConnections: true,
@@ -25,7 +25,7 @@ let pool;
 
 export async function initializeDatabase() {
   try {
-    // 1. First connect without database selected to ensure database exists
+    // 1. Connect to MySQL server to ensure database exists
     const rootConnection = await mysql.createConnection({
       host: dbConfig.host,
       user: dbConfig.user,
@@ -54,6 +54,31 @@ export async function initializeDatabase() {
       }
     } else {
       console.log(`✅ Connected to MySQL database "${dbConfig.database}" with ${tables.length} tables.`);
+    }
+
+    // 4. Auto-migration: Ensure resolution purpose & plan columns exist
+    try {
+      const [colPurpose] = await pool.query("SHOW COLUMNS FROM tickets LIKE 'resolution_purpose';");
+      if (colPurpose.length === 0) {
+        await pool.query("ALTER TABLE tickets ADD COLUMN resolution_purpose VARCHAR(150) DEFAULT 'General Triage & Investigation';");
+      }
+
+      const [colPlan] = await pool.query("SHOW COLUMNS FROM tickets LIKE 'resolution_plan';");
+      if (colPlan.length === 0) {
+        await pool.query("ALTER TABLE tickets ADD COLUMN resolution_plan JSON DEFAULT NULL;");
+      }
+
+      const [colNotes] = await pool.query("SHOW COLUMNS FROM tickets LIKE 'resolution_notes';");
+      if (colNotes.length === 0) {
+        await pool.query("ALTER TABLE tickets ADD COLUMN resolution_notes TEXT DEFAULT NULL;");
+      }
+
+      const [colTarget] = await pool.query("SHOW COLUMNS FROM tickets LIKE 'target_resolution_date';");
+      if (colTarget.length === 0) {
+        await pool.query("ALTER TABLE tickets ADD COLUMN target_resolution_date VARCHAR(100) DEFAULT NULL;");
+      }
+    } catch (migErr) {
+      console.warn("⚠️ Column auto-migration note:", migErr.message);
     }
 
     return pool;

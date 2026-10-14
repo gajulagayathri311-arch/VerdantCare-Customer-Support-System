@@ -1,11 +1,10 @@
-
 import {
   createContext,
   useContext,
   useState,
   useEffect
 } from "react";
-
+import API from "../services/api";
 import { ticketService } from "../services/ticketService";
 
 const AuthContext = createContext(null);
@@ -26,10 +25,24 @@ export function AuthProvider({ children }) {
       localStorage.setItem("user", JSON.stringify(user));
     } else {
       localStorage.removeItem("user");
+      localStorage.removeItem("token");
     }
   }, [user]);
 
-  // Save user and token after real backend login
+  // Listen for 401 Unauthorized events from api.js
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      console.warn("Session expired or token invalid. Redirecting to login...");
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      setUser(null);
+    };
+
+    window.addEventListener("auth:unauthorized", handleUnauthorized);
+    return () => window.removeEventListener("auth:unauthorized", handleUnauthorized);
+  }, []);
+
+  // Save user and token after login or registration
   const login = (loginData) => {
     const loggedInUser = loginData.user || loginData;
 
@@ -37,11 +50,7 @@ export function AuthProvider({ children }) {
       localStorage.setItem("token", loginData.token);
     }
 
-    localStorage.setItem(
-      "user",
-      JSON.stringify(loggedInUser)
-    );
-
+    localStorage.setItem("user", JSON.stringify(loggedInUser));
     setUser(loggedInUser);
   };
 
@@ -52,17 +61,33 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
-  // Demo mode does not create a real backend token
-  const quickLoginAs = (role = "CUSTOMER") => {
-    localStorage.removeItem("token");
+  // Quick Demo Login: Authenticates with backend to acquire a valid token
+  const quickLoginAs = async (role = "CUSTOMER") => {
+    const isAgent = role === "ADMIN";
+    const credentials = isAgent
+      ? { email: "alex.mercer@verdantcare.com", password: "admin123" }
+      : { email: "sarah.jenkins@example.com", password: "password123" };
 
-    const demoUser =
-      role === "ADMIN"
-        ? ticketService.DEFAULT_USERS.admin
-        : ticketService.DEFAULT_USERS.customer;
+    const fallbackUser = isAgent
+      ? ticketService.DEFAULT_USERS.admin
+      : ticketService.DEFAULT_USERS.customer;
 
-    localStorage.setItem("user", JSON.stringify(demoUser));
-    setUser(demoUser);
+    try {
+      const response = await API.post("/auth/login", credentials);
+      if (response.data?.token && response.data?.user) {
+        login(response.data);
+        return response.data.user;
+      }
+    } catch (error) {
+      console.warn("Quick demo backend auth fallback:", error.message);
+    }
+
+    // Set demo token fallback supported by backend authMiddleware
+    const demoToken = isAgent ? "demo_admin_token" : "demo_customer_token";
+    localStorage.setItem("token", demoToken);
+    localStorage.setItem("user", JSON.stringify(fallbackUser));
+    setUser(fallbackUser);
+    return fallbackUser;
   };
 
   return (

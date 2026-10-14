@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { ticketService } from "../services/ticketService";
+import { ticketService, RESOLUTION_PURPOSES } from "../services/ticketService";
 import { enhanceProblemDescription } from "../services/aiService";
 
 export default function CreateTicket() {
@@ -18,6 +18,12 @@ export default function CreateTicket() {
   const [description, setDescription] = useState(initialDesc);
   const [category, setCategory] = useState(initialCat);
   const [priority, setPriority] = useState("Medium");
+  const [desiredPurpose, setDesiredPurpose] = useState(() => {
+    if (initialCat === "Billing") return "Refund & Financial Adjustment";
+    if (initialCat === "Account") return "Account Security & Access Recovery";
+    if (initialCat === "Technical") return "Root-Cause Investigation & Code Hotfix";
+    return "General Triage & Investigation";
+  });
   const [includeDiagnostics, setIncludeDiagnostics] = useState(true);
   const [contactPreference, setContactPreference] = useState("In-App Discussion");
   const [attachments, setAttachments] = useState([]);
@@ -76,18 +82,30 @@ export default function CreateTicket() {
         finalDescription += `\n\n[DIAGNOSTIC TELEMETRY]\n- Preferred Contact: ${contactPreference}\n- User Agent: ${navigator.userAgent}\n- Resolution: ${window.screen.width}x${window.screen.height}\n- Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`;
       }
 
+      const preset = RESOLUTION_PURPOSES.find((p) => p.name === desiredPurpose);
+      const initialPlan = preset 
+        ? preset.defaultSteps.map((s, idx) => ({ id: idx + 1, text: s.text, completed: false }))
+        : [
+            { id: 1, text: "Review description and environment telemetry", completed: false },
+            { id: 2, text: "Execute technical / billing resolution action", completed: false },
+            { id: 3, text: "Verify successful outcome with customer", completed: false }
+          ];
+
       const created = await ticketService.createTicket({
         subject: subject.trim(),
         description: finalDescription,
         category,
         priority,
+        resolutionPurpose: desiredPurpose,
+        resolutionPlan: initialPlan,
+        targetResolutionDate: preset ? `Within ${preset.slaHours} Hours` : "Within 24 Hours",
         userId: user?.id || 101,
         userName: user?.name || "Sarah Jenkins",
         userEmail: user?.email || "sarah.jenkins@example.com",
         attachments: attachments.map((a) => a.name)
       });
 
-      setSuccessMsg(`Ticket #${created.id} submitted! Assigning specialist...`);
+      setSuccessMsg(`Ticket #${created.id} submitted with purpose "${desiredPurpose}"! Assigning specialist...`);
 
       setTimeout(() => {
         navigate(`/ticket/${created.id}`);
@@ -252,6 +270,48 @@ export default function CreateTicket() {
                   <option value="High">High (Urgent Impact — &lt; 1h SLA)</option>
                 </select>
               </div>
+            </div>
+
+            {/* Desired Resolution Purpose / Target Outcome */}
+            <div className="form-group-item" style={{ background: "var(--beige-100)", padding: "16px 20px", borderRadius: "var(--radius-lg)", border: "1px solid var(--border-color)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "6px" }}>
+                <label style={{ fontSize: "13.5px", fontWeight: 700, color: "var(--olive-950)", margin: 0 }}>
+                  🎯 Desired Resolution Purpose / Target Outcome *
+                </label>
+                <span style={{ fontSize: "11.5px", color: "var(--olive-700)", fontWeight: 600 }}>
+                  Helps our team execute the specific action plan immediately
+                </span>
+              </div>
+
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "6px" }}>
+                {RESOLUTION_PURPOSES.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    className={`ai-chip-button ${desiredPurpose === preset.name ? "active" : ""}`}
+                    style={{
+                      padding: "7px 12px",
+                      backgroundColor: desiredPurpose === preset.name ? "var(--olive-700)" : "var(--surface-white)",
+                      color: desiredPurpose === preset.name ? "#ffffff" : "var(--olive-950)",
+                      borderColor: desiredPurpose === preset.name ? "var(--olive-800)" : "var(--beige-400)",
+                      fontWeight: 600
+                    }}
+                    onClick={() => setDesiredPurpose(preset.name)}
+                  >
+                    <span>{preset.icon}</span> {preset.name}
+                  </button>
+                ))}
+              </div>
+
+              {(() => {
+                const selected = RESOLUTION_PURPOSES.find((p) => p.name === desiredPurpose);
+                if (!selected) return null;
+                return (
+                  <div style={{ fontSize: "12.5px", color: "var(--text-body)", marginTop: "10px", padding: "8px 12px", background: "rgba(255, 255, 255, 0.7)", borderRadius: "var(--radius-sm)" }}>
+                    <strong>Target Objective:</strong> {selected.description} • <em>Standard SLA: Within {selected.slaHours} hours</em>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Contact Preference */}

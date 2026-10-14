@@ -279,6 +279,11 @@ export default function CustomerDashboard() {
                     <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
                       Category: {ticket.category}
                     </span>
+                    {ticket.resolutionPurpose && (
+                      <span className="purpose-badge" style={{ fontSize: "11px", padding: "2px 8px" }}>
+                        🎯 {ticket.resolutionPurpose}
+                      </span>
+                    )}
                     {ticket.needsCustomerReply && (
                       <span style={{ fontSize: "11px", fontWeight: 700, background: "#fee2e2", color: "#b91c1c", padding: "2px 8px", borderRadius: "10px" }}>
                         Action Required

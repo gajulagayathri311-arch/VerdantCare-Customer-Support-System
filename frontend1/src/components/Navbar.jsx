@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
@@ -5,6 +6,15 @@ export default function Navbar() {
   const { user, logout, quickLoginAs } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+
+  const [currentTheme, setCurrentTheme] = useState(() => {
+    return localStorage.getItem("verdant_theme_v3") || "cashmere-sand";
+  });
+
+  useEffect(() => {
+    document.body.setAttribute("data-theme", currentTheme);
+    localStorage.setItem("verdant_theme_v3", currentTheme);
+  }, [currentTheme]);
 
   const handleLogout = () => {
     logout();
@@ -87,8 +97,8 @@ export default function Navbar() {
           <div className="demo-role-switcher" title="Quick switch between Customer and Agent view">
             <button
               className={`demo-role-btn ${user?.role === "CUSTOMER" ? "active" : ""}`}
-              onClick={() => {
-                quickLoginAs("CUSTOMER");
+              onClick={async () => {
+                await quickLoginAs("CUSTOMER");
                 navigate("/customer-dashboard");
               }}
             >
@@ -96,12 +106,44 @@ export default function Navbar() {
             </button>
             <button
               className={`demo-role-btn ${user?.role === "ADMIN" ? "active" : ""}`}
-              onClick={() => {
-                quickLoginAs("ADMIN");
+              onClick={async () => {
+                await quickLoginAs("ADMIN");
                 navigate("/admin-dashboard");
               }}
             >
               Agent / Admin
+            </button>
+          </div>
+
+          {/* Background Palette / Theme Mode Selector */}
+          <div className="theme-picker-container" title="Select background theme palette">
+            <button
+              className={`theme-pill-btn ${currentTheme === "cashmere-sand" ? "active" : ""}`}
+              onClick={() => setCurrentTheme("cashmere-sand")}
+              title="Rich Cashmere & Golden Sandstone (Default)"
+            >
+              🌾
+            </button>
+            <button
+              className={`theme-pill-btn ${currentTheme === "warm-linen" ? "active" : ""}`}
+              onClick={() => setCurrentTheme("warm-linen")}
+              title="Warm Linen & Olive Glow"
+            >
+              🌿
+            </button>
+            <button
+              className={`theme-pill-btn ${currentTheme === "sage-oasis" ? "active" : ""}`}
+              onClick={() => setCurrentTheme("sage-oasis")}
+              title="Soft Sage Oasis"
+            >
+              🍃
+            </button>
+            <button
+              className={`theme-pill-btn ${currentTheme === "olive-nocturne" ? "active" : ""}`}
+              onClick={() => setCurrentTheme("olive-nocturne")}
+              title="Olive Nocturne (Dark Mode)"
+            >
+              🌑
             </button>
           </div>
 

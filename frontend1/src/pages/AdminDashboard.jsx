@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ticketService } from "../services/ticketService";
+import { ticketService, RESOLUTION_PURPOSES } from "../services/ticketService";
 import { useAuth } from "../context/AuthContext";
 
 export default function AdminDashboard() {
@@ -132,27 +132,64 @@ export default function AdminDashboard() {
 
       {/* Category Breakdown & Recent Queue */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "24px" }}>
-        {/* Category breakdown */}
-        <div className="card-surface" style={{ height: "fit-content" }}>
-          <h3 style={{ fontSize: "18px", color: "var(--olive-950)", marginBottom: "16px" }}>
-            Category Distribution
-          </h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {categories.map((cat) => {
-              const count = tickets.filter((t) => t.category === cat).length;
-              const pct = tickets.length > 0 ? Math.round((count / tickets.length) * 100) : 0;
-              return (
-                <div key={cat}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", marginBottom: "4px" }}>
-                    <span style={{ fontWeight: 600 }}>{cat}</span>
-                    <span style={{ color: "var(--text-muted)" }}>{count} ({pct}%)</span>
+        {/* Left column: Category & Purpose breakdowns */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          {/* Category breakdown */}
+          <div className="card-surface" style={{ height: "fit-content", marginBottom: 0 }}>
+            <h3 style={{ fontSize: "18px", color: "var(--olive-950)", marginBottom: "16px" }}>
+              Category Distribution
+            </h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {categories.map((cat) => {
+                const count = tickets.filter((t) => t.category === cat).length;
+                const pct = tickets.length > 0 ? Math.round((count / tickets.length) * 100) : 0;
+                return (
+                  <div key={cat}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", marginBottom: "4px" }}>
+                      <span style={{ fontWeight: 600 }}>{cat}</span>
+                      <span style={{ color: "var(--text-muted)" }}>{count} ({pct}%)</span>
+                    </div>
+                    <div style={{ height: "6px", backgroundColor: "var(--beige-200)", borderRadius: "3px", overflow: "hidden" }}>
+                      <div style={{ width: `${pct}%`, height: "100%", backgroundColor: "var(--olive-600)" }}></div>
+                    </div>
                   </div>
-                  <div style={{ height: "6px", backgroundColor: "var(--beige-200)", borderRadius: "3px", overflow: "hidden" }}>
-                    <div style={{ width: `${pct}%`, height: "100%", backgroundColor: "var(--olive-600)" }}></div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Resolution Purpose breakdown */}
+          <div className="card-surface" style={{ height: "fit-content", marginBottom: 0 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <h3 style={{ fontSize: "18px", color: "var(--olive-950)", margin: 0 }}>
+                🎯 Purpose-Driven Allocation
+              </h3>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {RESOLUTION_PURPOSES.map((p) => {
+                const count = tickets.filter((t) => (t.resolutionPurpose || "General Triage & Investigation") === p.name).length;
+                const resolvedCount = tickets.filter(
+                  (t) => (t.resolutionPurpose || "General Triage & Investigation") === p.name && (t.status === "RESOLVED" || t.status === "CLOSED")
+                ).length;
+                const pct = count > 0 ? Math.round((resolvedCount / count) * 100) : 0;
+
+                return (
+                  <div key={p.id}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12.5px", marginBottom: "4px" }}>
+                      <span style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: "5px" }}>
+                        <span>{p.icon}</span> {p.name}
+                      </span>
+                      <span style={{ color: "var(--text-muted)", fontSize: "12px" }}>
+                        {count} tickets {count > 0 ? `(${pct}% resolved)` : ""}
+                      </span>
+                    </div>
+                    <div style={{ height: "5px", backgroundColor: "var(--beige-200)", borderRadius: "3px", overflow: "hidden" }}>
+                      <div style={{ width: `${count > 0 ? pct : 0}%`, height: "100%", backgroundColor: pct === 100 ? "#16a34a" : "var(--olive-500)" }}></div>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
 
@@ -178,10 +215,10 @@ export default function AdminDashboard() {
             <div className="empty-message">No tickets in system.</div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              {tickets.slice(0, 4).map((ticket) => (
+              {tickets.slice(0, 5).map((ticket) => (
                 <div key={ticket.id} className="ticket-row-card" style={{ padding: "14px 18px" }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="ticket-meta-col">
+                    <div className="ticket-meta-col" style={{ flexWrap: "wrap", gap: "6px" }}>
                       <span className="ticket-id-tag">#{ticket.id}</span>
                       <span className={`badge-status badge-${ticket.status.toLowerCase()}`}>
                         {ticket.status.replace("_", " ")}
@@ -189,12 +226,17 @@ export default function AdminDashboard() {
                       <span className={`badge-priority priority-${ticket.priority.toLowerCase()}`}>
                         {ticket.priority}
                       </span>
+                      {ticket.resolutionPurpose && (
+                        <span className="purpose-badge" style={{ fontSize: "11px", padding: "2px 8px" }}>
+                          🎯 {ticket.resolutionPurpose}
+                        </span>
+                      )}
                     </div>
                     <Link to={`/ticket/${ticket.id}`} className="ticket-title-link" style={{ fontSize: "15px" }}>
                       {ticket.subject}
                     </Link>
                     <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                      Customer: {ticket.user?.name || "Customer"} ({ticket.user?.email || "customer@example.com"})
+                      Customer: {ticket.user?.name || "Customer"} ({ticket.user?.email || "customer@example.com"}) • Specialist: <strong>{ticket.assignedTo || "Support Lead"}</strong>
                     </div>
                   </div>
                   <Link to={`/ticket/${ticket.id}`} className="btn-secondary btn-sm">

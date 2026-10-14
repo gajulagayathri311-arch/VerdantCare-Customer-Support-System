@@ -17,42 +17,44 @@
   --olive-100: #e8f0df;
   --olive-50: #f4f8ef;
 
-  /* Warm Beige / Sand / Linen Shades */
-  --beige-900: #564d3f;
-  --beige-800: #7c705e;
-  --beige-700: #a29480;
-  --beige-600: #c5b9a6;
-  --beige-400: #ddd4c5;
-  --beige-300: #e8e2d5;
-  --beige-200: #f0eae0;
-  --beige-100: #f7f3ec;
-  --beige-50: #fbf9f5;
-  --surface-white: #ffffff;
+  /* Warm Beige & Golden Sandstone Shades */
+  --beige-900: #423625;
+  --beige-800: #66543d;
+  --beige-700: #8c7659;
+  --beige-600: #a89173;
+  --beige-400: #c5b092;
+  --beige-300: #d6c4a9;
+  --beige-200: #e2d4be;
+  --beige-100: #ede3d0;
+  --beige-50: #f7efe0;
+  --surface-white: #faf4e8;
+  --surface-hover: #fffbf2;
+  --surface-focus: #fffdf8;
 
   /* Typography & Theme Tokens */
-  --text-main: #21291c;
-  --text-body: #47533f;
-  --text-muted: #74806c;
+  --text-main: #231f18;
+  --text-body: #423c30;
+  --text-muted: #736855;
   --text-inverse: #ffffff;
 
-  --border-color: #e3dcce;
-  --border-focus: #567142;
+  --border-color: #d1bfa2;
+  --border-focus: #557241;
 
-  --status-open-bg: #fdf5e6;
-  --status-open-text: #96610b;
-  --status-open-border: #f3d79b;
+  --status-open-bg: #fbedd7;
+  --status-open-text: #8e5807;
+  --status-open-border: #f0cca1;
 
-  --status-progress-bg: #eaf1fb;
-  --status-progress-text: #2159a6;
-  --status-progress-border: #bcd5f7;
+  --status-progress-bg: #e2ecf7;
+  --status-progress-text: #1d4e92;
+  --status-progress-border: #acc7e8;
 
-  --status-resolved-bg: #edf6eb;
-  --status-resolved-text: #2e6922;
-  --status-resolved-border: #bce3b4;
+  --status-resolved-bg: #e4efe0;
+  --status-resolved-text: #2a5f1f;
+  --status-resolved-border: #aed6a5;
 
-  --status-high-bg: #fdf0ed;
-  --status-high-text: #a82e18;
-  --status-high-border: #f8c7bf;
+  --status-high-bg: #f9e4e0;
+  --status-high-text: #962a16;
+  --status-high-border: #f0b5ab;
 
   --radius-sm: 6px;
   --radius-md: 10px;
@@ -60,11 +62,82 @@
   --radius-xl: 24px;
   --radius-full: 9999px;
 
-  --shadow-sm: 0 1px 3px rgba(38, 53, 29, 0.06);
-  --shadow-md: 0 6px 16px -2px rgba(38, 53, 29, 0.08), 0 2px 6px -1px rgba(38, 53, 29, 0.04);
-  --shadow-lg: 0 16px 32px -4px rgba(38, 53, 29, 0.12), 0 6px 12px -2px rgba(38, 53, 29, 0.05);
+  --shadow-sm: 0 1px 3px rgba(35, 31, 24, 0.07);
+  --shadow-md: 0 8px 20px -3px rgba(35, 31, 24, 0.09), 0 3px 8px -1px rgba(35, 31, 24, 0.05);
+  --shadow-lg: 0 18px 36px -4px rgba(35, 31, 24, 0.13), 0 8px 16px -2px rgba(35, 31, 24, 0.06);
 
   --font-sans: 'Segoe UI', system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+
+  /* App Background Tokens: Rich Warm Tuscan Sand & Botanical Olive (#EDE3D0) */
+  --bg-color: #ede3d0;
+  --bg-gradient: radial-gradient(circle at 14% 15%, rgba(206, 171, 122, 0.40) 0%, transparent 48%),
+                 radial-gradient(circle at 86% 12%, rgba(225, 198, 155, 0.50) 0%, transparent 50%),
+                 radial-gradient(circle at 50% 86%, rgba(107, 138, 83, 0.22) 0%, transparent 55%),
+                 linear-gradient(135deg, #f5ecd8 0%, #ede3d0 45%, #e1d3bc 100%);
+  --card-surface: rgba(250, 244, 232, 0.92);
+  --card-border: #d4c2a7;
+}
+
+/* Background Theme Presets */
+body[data-theme="cashmere-sand"] {
+  --bg-color: #ede3d0;
+  --bg-gradient: radial-gradient(circle at 14% 15%, rgba(206, 171, 122, 0.40) 0%, transparent 48%),
+                 radial-gradient(circle at 86% 12%, rgba(225, 198, 155, 0.50) 0%, transparent 50%),
+                 radial-gradient(circle at 50% 86%, rgba(107, 138, 83, 0.22) 0%, transparent 55%),
+                 linear-gradient(135deg, #f5ecd8 0%, #ede3d0 45%, #e1d3bc 100%);
+  --surface-white: #faf4e8;
+  --surface-hover: #fffbf2;
+  --surface-focus: #fffdf8;
+  --card-surface: rgba(250, 244, 232, 0.92);
+  --card-border: #d4c2a7;
+  --border-color: #d1bfa2;
+}
+
+body[data-theme="warm-linen"] {
+  --bg-color: #e8ded0;
+  --bg-gradient: radial-gradient(circle at 12% 16%, rgba(107, 138, 83, 0.22) 0%, transparent 45%),
+                 radial-gradient(circle at 88% 12%, rgba(220, 194, 155, 0.55) 0%, transparent 48%),
+                 radial-gradient(circle at 50% 92%, rgba(141, 169, 118, 0.22) 0%, transparent 55%),
+                 linear-gradient(135deg, #f3eae0 0%, #e8ded0 50%, #dccebd 100%);
+  --surface-white: #f7f1e6;
+  --surface-hover: #fffdf7;
+  --surface-focus: #fffdf8;
+  --card-surface: rgba(247, 241, 230, 0.92);
+  --card-border: #d0c0a7;
+  --border-color: #c9b79d;
+}
+
+body[data-theme="sage-oasis"] {
+  --bg-color: #dce7d6;
+  --bg-gradient: radial-gradient(circle at 18% 18%, rgba(86, 113, 66, 0.32) 0%, transparent 48%),
+                 radial-gradient(circle at 82% 16%, rgba(200, 218, 188, 0.65) 0%, transparent 50%),
+                 radial-gradient(circle at 50% 85%, rgba(115, 148, 92, 0.28) 0%, transparent 55%),
+                 linear-gradient(135deg, #eaf2e5 0%, #dce7d6 50%, #ccdcc5 100%);
+  --surface-white: #f3f8ee;
+  --surface-hover: #fcfffa;
+  --surface-focus: #ffffff;
+  --card-surface: rgba(243, 248, 238, 0.93);
+  --card-border: #b4c9ad;
+  --border-color: #abbfa3;
+  --text-main: #1d2617;
+  --text-body: #323f2a;
+}
+
+body[data-theme="olive-nocturne"] {
+  --bg-color: #141c10;
+  --bg-gradient: radial-gradient(circle at 15% 15%, rgba(53, 71, 40, 0.6) 0%, transparent 50%),
+                 radial-gradient(circle at 85% 20%, rgba(38, 53, 29, 0.7) 0%, transparent 50%),
+                 radial-gradient(circle at 50% 85%, rgba(86, 113, 66, 0.35) 0%, transparent 55%),
+                 linear-gradient(135deg, #10170d 0%, #151e11 50%, #0d130a 100%);
+  --surface-white: #1b2516;
+  --surface-hover: #23301d;
+  --surface-focus: #283721;
+  --card-surface: rgba(26, 36, 21, 0.94);
+  --card-border: rgba(70, 92, 53, 0.7);
+  --border-color: #2e4023;
+  --text-main: #fbf9f5;
+  --text-body: #d4e2c7;
+  --text-muted: #9fae94;
 }
 
 *, *::before, *::after {
@@ -76,10 +149,14 @@
 html, body {
   min-height: 100%;
   font-family: var(--font-sans);
-  background-color: var(--beige-50);
+  background-color: var(--bg-color);
+  background-image: var(--bg-gradient);
+  background-attachment: fixed;
+  background-size: cover;
   color: var(--text-body);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.4s ease, color 0.3s ease;
 }
 
 /* Remove Vite root restrictions so layout is fluid and full width */
@@ -91,7 +168,7 @@ html, body {
   flex-direction: column;
   text-align: left !important;
   border-inline: none !important;
-  background-color: var(--beige-50);
+  background: transparent !important;
 }
 
 a {
@@ -193,7 +270,7 @@ input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--olive-600);
   box-shadow: 0 0 0 3px rgba(86, 113, 66, 0.15);
-  background-color: #ffffff;
+  background-color: var(--surface-focus, #fffdf8);
 }
 
 label {

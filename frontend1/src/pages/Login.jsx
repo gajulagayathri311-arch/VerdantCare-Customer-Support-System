@@ -1,18 +1,20 @@
-
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import API from "../services/api";
 import "../styles/Login.css";
 
 export default function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login, quickLoginAs } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  const isSessionExpired = searchParams.get("session") === "expired";
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -28,23 +30,11 @@ export default function Login() {
       const data = response.data;
 
       if (!data.token || !data.user) {
-        throw new Error(
-          "Server did not return a token and user information."
-        );
+        throw new Error("Server did not return a valid session token.");
       }
 
-      // Save authentication details
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-
-      // Update React authentication state
+      // Update React authentication state and localStorage
       login(data);
-
-      console.log("Login successful");
-      console.log(
-        "Token saved:",
-        Boolean(localStorage.getItem("token"))
-      );
 
       // Navigate according to user role
       if (data.user.role === "ADMIN") {
@@ -53,35 +43,38 @@ export default function Login() {
         navigate("/customer-dashboard");
       }
     } catch (error) {
-      console.error(
-        "Login failed:",
-        error.response?.data || error.message
-      );
-
+      console.error("Login failed:", error.response?.data || error.message);
       setErrorMsg(
         error.response?.data?.message ||
-        error.message ||
-        "Unable to log in. Please try again."
+        "Invalid email or password. Please try again."
       );
     } finally {
       setLoading(false);
     }
   };
 
-  // Demo login is separate from real authentication
-  const handleQuickDemo = (role) => {
-    quickLoginAs(role);
-
-    if (role === "ADMIN") {
-      navigate("/admin-dashboard");
-    } else {
-      navigate("/customer-dashboard");
+  const handleQuickDemo = async (role) => {
+    setLoading(true);
+    setErrorMsg("");
+    try {
+      const user = await quickLoginAs(role);
+      if (user?.role === "ADMIN" || role === "ADMIN") {
+        navigate("/admin-dashboard");
+      } else {
+        navigate("/customer-dashboard");
+      }
+    } catch (err) {
+      console.error("Demo login error:", err);
+      setErrorMsg("Unable to complete demo sign in.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="login-container animate-fade-in">
       <div className="login-form">
+        {/* Brand Icon & Header */}
         <div
           style={{
             display: "flex",
@@ -103,7 +96,8 @@ export default function Login() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              margin: "0 auto 12px"
+              margin: "0 auto 12px",
+              boxShadow: "0 2px 8px rgba(53, 71, 40, 0.1)"
             }}
           >
             🌿
@@ -116,6 +110,24 @@ export default function Login() {
           </div>
         </div>
 
+        {isSessionExpired && !errorMsg && (
+          <div
+            style={{
+              width: "100%",
+              textAlign: "center",
+              backgroundColor: "var(--status-open-bg)",
+              color: "var(--status-open-text)",
+              border: "1px solid var(--status-open-border)",
+              padding: "10px 14px",
+              borderRadius: "var(--radius-md)",
+              marginBottom: "18px",
+              fontSize: "13px"
+            }}
+          >
+            ⏱️ Your session expired. Please sign in to continue.
+          </div>
+        )}
+
         {errorMsg && (
           <div className="auth-alert-error">
             {errorMsg}
@@ -127,7 +139,6 @@ export default function Login() {
             <label htmlFor="login-email">
               Email Address
             </label>
-
             <input
               id="login-email"
               type="email"
@@ -142,7 +153,6 @@ export default function Login() {
             <label htmlFor="login-password">
               Password
             </label>
-
             <input
               id="login-password"
               type="password"
@@ -158,9 +168,7 @@ export default function Login() {
             className="auth-submit-btn"
             disabled={loading}
           >
-            {loading
-              ? "Authenticating..."
-              : "Sign In to Portal →"}
+            {loading ? "Authenticating..." : "Sign In to Portal →"}
           </button>
         </form>
 
@@ -172,6 +180,7 @@ export default function Login() {
           <div className="demo-btn-group">
             <button
               type="button"
+              disabled={loading}
               onClick={() => handleQuickDemo("CUSTOMER")}
             >
               👤 Sarah (Customer)
@@ -179,6 +188,7 @@ export default function Login() {
 
             <button
               type="button"
+              disabled={loading}
               onClick={() => handleQuickDemo("ADMIN")}
             >
               🛡️ Alex (Agent / Admin)

@@ -12,8 +12,21 @@ async function populateTicketDetails(pool, ticket) {
     [ticket.id]
   );
 
+  let parsedPlan = null;
+  if (ticket.resolution_plan) {
+    try {
+      parsedPlan = typeof ticket.resolution_plan === "string" ? JSON.parse(ticket.resolution_plan) : ticket.resolution_plan;
+    } catch {
+      parsedPlan = null;
+    }
+  }
+
   return {
     ...ticket,
+    resolutionPurpose: ticket.resolution_purpose || "General Triage & Investigation",
+    resolutionPlan: parsedPlan,
+    resolutionNotes: ticket.resolution_notes || null,
+    targetResolutionDate: ticket.target_resolution_date || null,
     user: {
       id: ticket.user_id,
       name: ticket.user_name || "Customer",
@@ -50,7 +63,7 @@ export async function getAllTickets(req, res) {
 
 export async function getUserTickets(req, res) {
   try {
-    const { userId } = req.params;
+    const requestedUserId = req.params.userId || req.user?.id;
     const pool = getPool();
 
     const [tickets] = await pool.query(
@@ -59,7 +72,7 @@ export async function getUserTickets(req, res) {
        LEFT JOIN users u ON t.user_id = u.id
        WHERE t.user_id = ?
        ORDER BY t.created_at DESC;`,
-      [userId]
+      [requestedUserId]
     );
 
     const fullTickets = await Promise.all(
@@ -106,32 +119,53 @@ export async function createTicket(req, res) {
       category = "Technical",
       priority = "Medium",
       userId,
-      userName = "Customer",
-      userEmail = "customer@example.com",
-      attachments = []
+      userName,
+      userEmail,
+      attachments = [],
+      resolutionPurpose = "General Triage & Investigation",
+      resolutionPlan = null,
+      resolutionNotes = null,
+      targetResolutionDate = null
     } = req.body;
 
-    if (!subject || !description) {
+    if (!subject?.trim() || !description?.trim()) {
       return res.status(400).json({ message: "Subject and description are required." });
     }
+
+    const finalUserId = userId || req.user?.id || 101;
+    const finalUserName = userName || req.user?.name || "Customer";
+    const finalUserEmail = userEmail || req.user?.email || "customer@example.com";
 
     const pool = getPool();
     const ticketId = `TCK-${Math.floor(1000 + Math.random() * 9000)}`;
     const sentiment = priority === "High" ? "Urgent Attention Needed" : "Standard Inquiry";
 
     // 1. Insert into tickets
+    const planJson = resolutionPlan ? JSON.stringify(resolutionPlan) : null;
     await pool.query(
-      `INSERT INTO tickets (id, user_id, subject, description, category, priority, status, assigned_to, sentiment)
-       VALUES (?, ?, ?, ?, ?, ?, 'OPEN', 'Tier-1 Triage Queue', ?);`,
-      [ticketId, userId || 101, subject, description, category, priority, sentiment]
+      `INSERT INTO tickets (id, user_id, subject, description, category, priority, status, assigned_to, sentiment, resolution_purpose, resolution_plan, resolution_notes, target_resolution_date)
+       VALUES (?, ?, ?, ?, ?, ?, 'OPEN', 'Tier-1 Triage Queue', ?, ?, ?, ?, ?);`,
+      [
+        ticketId,
+        finalUserId,
+        subject.trim(),
+        description.trim(),
+        category,
+        priority,
+        sentiment,
+        resolutionPurpose,
+        planJson,
+        resolutionNotes || null,
+        targetResolutionDate || null
+      ]
     );
 
     // 2. Insert initial message into ticket_messages
-    const avatar = userName.slice(0, 2).toUpperCase() || "CU";
+    const avatar = finalUserName.slice(0, 2).toUpperCase() || "CU";
     await pool.query(
       `INSERT INTO ticket_messages (ticket_id, sender_name, sender_role, avatar, message_text)
        VALUES (?, ?, 'CUSTOMER', ?, ?);`,
-      [ticketId, userName, avatar, description]
+      [ticketId, finalUserName, avatar, description.trim()]
     );
 
     // 3. Insert attachments if provided
@@ -146,29 +180,33 @@ export async function createTicket(req, res) {
 
     const newTicket = {
       id: ticketId,
-      userId: userId || 101,
-      subject,
-      description,
+      userId: finalUserId,
+      subject: subject.trim(),
+      description: description.trim(),
       category,
       priority,
       status: "OPEN",
       assignedTo: "Tier-1 Triage Queue",
+      resolutionPurpose,
+      resolutionPlan,
+      resolutionNotes,
+      targetResolutionDate,
       sentiment,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       user: {
-        id: userId || 101,
-        name: userName,
-        email: userEmail
+        id: finalUserId,
+        name: finalUserName,
+        email: finalUserEmail
       },
       messages: [
         {
           id: 1,
-          sender: userName,
+          sender: finalUserName,
           senderRole: "CUSTOMER",
           avatar,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          text: description
+          text: description.trim()
         }
       ],
       attachments
@@ -220,29 +258,112 @@ export async function bulkUpdateStatus(req, res) {
 export async function assignTicket(req, res) {
   try {
     const { id } = req.params;
-    const { assignedTo } = req.body;
+    const { assignedTo, resolutionPurpose, resolutionPlan, resolutionNotes, targetResolutionDate } = req.body;
 
-    if (!assignedTo) {
-      return res.status(400).json({ message: "assignedTo is required." });
+    if (!assignedTo && !resolutionPurpose) {
+      return res.status(400).json({ message: "assignedTo or resolutionPurpose is required." });
     }
 
     const pool = getPool();
-    await pool.query("UPDATE tickets SET assigned_to = ? WHERE id = ?;", [assignedTo, id]);
+    const planJson = resolutionPlan ? JSON.stringify(resolutionPlan) : undefined;
 
-    res.json({ id, assignedTo, message: "Ticket reassigned successfully." });
+    const updates = [];
+    const params = [];
+
+    if (assignedTo !== undefined) {
+      updates.push("assigned_to = ?");
+      params.push(assignedTo);
+    }
+    if (resolutionPurpose !== undefined) {
+      updates.push("resolution_purpose = ?");
+      params.push(resolutionPurpose);
+    }
+    if (planJson !== undefined) {
+      updates.push("resolution_plan = ?");
+      params.push(planJson);
+    }
+    if (resolutionNotes !== undefined) {
+      updates.push("resolution_notes = ?");
+      params.push(resolutionNotes);
+    }
+    if (targetResolutionDate !== undefined) {
+      updates.push("target_resolution_date = ?");
+      params.push(targetResolutionDate);
+    }
+
+    updates.push("updated_at = NOW()");
+    params.push(id);
+
+    await pool.query(`UPDATE tickets SET ${updates.join(", ")} WHERE id = ?;`, params);
+
+    res.json({ id, assignedTo, resolutionPurpose, resolutionPlan, message: "Ticket assignment updated successfully." });
   } catch (error) {
     console.error("assignTicket Error:", error);
     res.status(500).json({ message: "Failed to assign ticket.", error: error.message });
   }
 }
 
+export async function assignPurpose(req, res) {
+  try {
+    const { id } = req.params;
+    const {
+      resolutionPurpose,
+      resolutionPlan,
+      resolutionNotes,
+      assignedTo,
+      targetResolutionDate
+    } = req.body;
+
+    if (!resolutionPurpose) {
+      return res.status(400).json({ message: "resolutionPurpose is required." });
+    }
+
+    const pool = getPool();
+    const planJson = resolutionPlan ? JSON.stringify(resolutionPlan) : null;
+
+    if (assignedTo) {
+      await pool.query(
+        `UPDATE tickets 
+         SET resolution_purpose = ?, resolution_plan = ?, resolution_notes = ?, assigned_to = ?, target_resolution_date = ?, updated_at = NOW() 
+         WHERE id = ?;`,
+        [resolutionPurpose, planJson, resolutionNotes || null, assignedTo, targetResolutionDate || null, id]
+      );
+    } else {
+      await pool.query(
+        `UPDATE tickets 
+         SET resolution_purpose = ?, resolution_plan = ?, resolution_notes = ?, target_resolution_date = ?, updated_at = NOW() 
+         WHERE id = ?;`,
+        [resolutionPurpose, planJson, resolutionNotes || null, targetResolutionDate || null, id]
+      );
+    }
+
+    res.json({
+      id,
+      resolutionPurpose,
+      resolutionPlan,
+      resolutionNotes,
+      assignedTo,
+      targetResolutionDate,
+      message: "Resolution purpose assigned successfully."
+    });
+  } catch (error) {
+    console.error("assignPurpose Error:", error);
+    res.status(500).json({ message: "Failed to assign resolution purpose.", error: error.message });
+  }
+}
+
 export async function addMessage(req, res) {
   try {
     const { id } = req.params;
-    const { sender, senderRole = "CUSTOMER", avatar = "CU", text } = req.body;
+    const {
+      sender = req.user?.name || "Support Team",
+      senderRole = req.user?.role || "CUSTOMER",
+      avatar = "CU",
+      text
+    } = req.body;
 
-    if (!text || !sender) {
-      return res.status(400).json({ message: "sender and text are required." });
+    if (!text?.trim()) {
+      return res.status(400).json({ message: "Message text is required." });
     }
 
     const pool = getPool();
@@ -251,7 +372,7 @@ export async function addMessage(req, res) {
     const [msgResult] = await pool.query(
       `INSERT INTO ticket_messages (ticket_id, sender_name, sender_role, avatar, message_text)
        VALUES (?, ?, ?, ?, ?);`,
-      [id, sender, senderRole, avatar, text]
+      [id, sender, senderRole, avatar, text.trim()]
     );
 
     // If agent replied, flag needs_customer_reply = true
@@ -266,7 +387,7 @@ export async function addMessage(req, res) {
       senderRole,
       avatar,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      text
+      text: text.trim()
     };
 
     res.status(201).json(newMessage);

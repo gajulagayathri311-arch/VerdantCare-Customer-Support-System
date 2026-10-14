@@ -20,28 +20,36 @@ export default function Register() {
     setLoading(true);
     setErrorMsg("");
 
-    const newUser = {
-      id: Math.floor(100 + Math.random() * 900),
-      name: name.trim(),
-      email: email.trim(),
-      password,
-      role
-    };
-
     try {
-      await API.post("/auth/register", newUser);
-    } catch {
-      // Fallback: proceed locally
-    }
+      const response = await API.post("/auth/register", {
+        name: name.trim(),
+        email: email.trim(),
+        password,
+        role
+      });
 
-    login(newUser);
+      const data = response.data;
 
-    if (role === "ADMIN") {
-      navigate("/admin-dashboard");
-    } else {
-      navigate("/customer-dashboard");
+      if (data?.token && data?.user) {
+        login(data);
+      } else {
+        login({ user: data, token: role === "ADMIN" ? "demo_admin_token" : "demo_customer_token" });
+      }
+
+      if (role === "ADMIN") {
+        navigate("/admin-dashboard");
+      } else {
+        navigate("/customer-dashboard");
+      }
+    } catch (err) {
+      console.error("Registration error:", err.response?.data || err.message);
+      setErrorMsg(
+        err.response?.data?.message ||
+        "Registration failed. Please check your information and try again."
+      );
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -110,7 +118,7 @@ export default function Register() {
             <input
               id="reg-password"
               type="password"
-              placeholder="Create a secure password"
+              placeholder="Create a secure password (min. 6 characters)"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required

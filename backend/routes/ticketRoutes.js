@@ -8,6 +8,7 @@ import {
   updateStatus,
   bulkUpdateStatus,
   assignTicket,
+  assignPurpose,
   addMessage,
   submitRating
 } from "../controllers/ticketController.js";
@@ -26,6 +27,7 @@ router.post("/", createTicket);
 router.put("/bulk-status", bulkUpdateStatus);
 router.put("/:id/status", updateStatus);
 router.put("/:id/assign", assignTicket);
+router.put("/:id/purpose", assignPurpose);
 router.post("/:id/messages", addMessage);
 router.post("/:id/rating", submitRating);
 

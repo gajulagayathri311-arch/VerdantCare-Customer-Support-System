@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { ticketService, CANNED_TEMPLATES } from "../services/ticketService";
+import { ticketService, CANNED_TEMPLATES, RESOLUTION_PURPOSES } from "../services/ticketService";
 import { generateAgentReplyDraft } from "../services/aiService";
 import { useAuth } from "../context/AuthContext";
 
@@ -11,10 +11,21 @@ export default function ManageTickets() {
   const [activeTab, setActiveTab] = useState("ALL");
   const [priorityFilter, setPriorityFilter] = useState("ALL");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
+  const [purposeFilter, setPurposeFilter] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
   const [replyDrafts, setReplyDrafts] = useState({});
   const [actionNotice, setActionNotice] = useState("");
+
+  // Purpose Assignment Modal State
+  const [activePurposeTicket, setActivePurposeTicket] = useState(null);
+  const [modalPurposeName, setModalPurposeName] = useState("");
+  const [modalAssignedTo, setModalAssignedTo] = useState("");
+  const [modalTargetDate, setModalTargetDate] = useState("Within 24 Hours");
+  const [modalNotes, setModalNotes] = useState("");
+  const [modalSteps, setModalSteps] = useState([]);
+  const [newStepInput, setNewStepInput] = useState("");
+  const [expandedChecklists, setExpandedChecklists] = useState({});
 
   const staffMembers = [
     "Alex Mercer (Lead Support)",
@@ -129,6 +140,93 @@ export default function ManageTickets() {
     }
   };
 
+  // Open modal to assign/edit purpose
+  const handleOpenPurposeModal = (ticket) => {
+    setActivePurposeTicket(ticket);
+    const existingPurpose = ticket.resolutionPurpose || "General Triage & Investigation";
+    setModalPurposeName(existingPurpose);
+    setModalAssignedTo(ticket.assignedTo || "Tier-1 Triage Queue");
+    setModalTargetDate(ticket.targetResolutionDate || "Within 24 Hours");
+    setModalNotes(ticket.resolutionNotes || "");
+
+    if (ticket.resolutionPlan && ticket.resolutionPlan.length > 0) {
+      setModalSteps([...ticket.resolutionPlan]);
+    } else {
+      // Find preset template default steps
+      const preset = RESOLUTION_PURPOSES.find((p) => p.name === existingPurpose);
+      if (preset) {
+        setModalSteps(preset.defaultSteps.map((s, idx) => ({ id: idx + 1, text: s.text, completed: !!s.completed })));
+      } else {
+        setModalSteps([
+          { id: 1, text: "Review description and diagnostic telemetry", completed: false },
+          { id: 2, text: "Execute technical / billing resolution action", completed: false },
+          { id: 3, text: "Verify successful outcome with customer", completed: false }
+        ]);
+      }
+    }
+  };
+
+  const handleSelectPresetPurpose = (presetName) => {
+    setModalPurposeName(presetName);
+    const preset = RESOLUTION_PURPOSES.find((p) => p.name === presetName);
+    if (preset) {
+      setModalSteps(preset.defaultSteps.map((s, idx) => ({ id: idx + 1, text: s.text, completed: false })));
+      setModalTargetDate(`Within ${preset.slaHours} Hours`);
+      if (!modalNotes) {
+        setModalNotes(preset.description);
+      }
+    }
+  };
+
+  const handleAddModalStep = () => {
+    if (!newStepInput.trim()) return;
+    setModalSteps((prev) => [
+      ...prev,
+      { id: Date.now(), text: newStepInput.trim(), completed: false }
+    ]);
+    setNewStepInput("");
+  };
+
+  const handleRemoveModalStep = (index) => {
+    setModalSteps((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSavePurposeModal = async () => {
+    if (!activePurposeTicket) return;
+    try {
+      await ticketService.assignResolutionPurpose(activePurposeTicket.id, {
+        resolutionPurpose: modalPurposeName,
+        resolutionPlan: modalSteps,
+        resolutionNotes: modalNotes,
+        assignedTo: modalAssignedTo,
+        targetResolutionDate: modalTargetDate
+      });
+
+      setActionNotice(`Resolution Purpose & Action Plan assigned to #${activePurposeTicket.id}!`);
+      setTimeout(() => setActionNotice(""), 3500);
+      setActivePurposeTicket(null);
+      loadTickets();
+    } catch {
+      alert("Failed to assign resolution purpose.");
+    }
+  };
+
+  const handleToggleCardStep = async (ticketId, stepIndex) => {
+    try {
+      await ticketService.toggleActionStep(ticketId, stepIndex);
+      loadTickets();
+    } catch {
+      alert("Could not update step progress.");
+    }
+  };
+
+  const toggleExpandChecklist = (ticketId) => {
+    setExpandedChecklists((prev) => ({
+      ...prev,
+      [ticketId]: !prev[ticketId]
+    }));
+  };
+
   const filteredTickets = tickets.filter((t) => {
     if (activeTab === "OPEN" && t.status !== "OPEN") return false;
     if (activeTab === "IN_PROGRESS" && t.status !== "IN_PROGRESS") return false;
@@ -136,13 +234,15 @@ export default function ManageTickets() {
 
     if (priorityFilter !== "ALL" && t.priority !== priorityFilter) return false;
     if (categoryFilter !== "ALL" && t.category !== categoryFilter) return false;
+    if (purposeFilter !== "ALL" && (t.resolutionPurpose || "General Triage & Investigation") !== purposeFilter) return false;
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       const matchId = String(t.id).toLowerCase().includes(q);
       const matchSub = t.subject.toLowerCase().includes(q);
       const matchCust = t.user?.name?.toLowerCase().includes(q);
-      if (!matchId && !matchSub && !matchCust) return false;
+      const matchPurp = (t.resolutionPurpose || "").toLowerCase().includes(q);
+      if (!matchId && !matchSub && !matchCust && !matchPurp) return false;
     }
 
     return true;
@@ -242,6 +342,19 @@ export default function ManageTickets() {
               <option value="High">High Priority Only</option>
               <option value="Medium">Medium Priority</option>
               <option value="Low">Low Priority</option>
+            </select>
+
+            <select
+              value={purposeFilter}
+              onChange={(e) => setPurposeFilter(e.target.value)}
+              style={{ width: "auto", padding: "8px 12px", marginBottom: 0, fontSize: "13px" }}
+            >
+              <option value="ALL">🎯 All Resolution Purposes</option>
+              {RESOLUTION_PURPOSES.map((p) => (
+                <option key={p.id} value={p.name}>
+                  {p.icon} {p.name}
+                </option>
+              ))}
             </select>
 
             <div className="search-input-wrapper">
@@ -420,6 +533,97 @@ export default function ManageTickets() {
                   {ticket.description}
                 </div>
 
+                {/* Resolution Purpose & Goal-Driven Action Plan */}
+                {(() => {
+                  const purposeName = ticket.resolutionPurpose || "General Triage & Investigation";
+                  const preset = RESOLUTION_PURPOSES.find((p) => p.name === purposeName);
+                  const icon = preset ? preset.icon : "🎯";
+                  const plan = ticket.resolutionPlan || [];
+                  const completedSteps = plan.filter((s) => s.completed).length;
+                  const totalSteps = plan.length;
+                  const pct = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
+                  const isExpanded = !!expandedChecklists[ticket.id];
+
+                  return (
+                    <div className="purpose-banner-box">
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                          <span className="purpose-badge purpose-badge-lg">
+                            <span className="purpose-badge-icon">{icon}</span>
+                            <span>Target Purpose: <strong>{purposeName}</strong></span>
+                          </span>
+                          <span style={{ fontSize: "12px", color: "var(--olive-800)", background: "rgba(86, 113, 66, 0.12)", padding: "3px 8px", borderRadius: "var(--radius-sm)", fontWeight: 600 }}>
+                            ⏱️ Target: {ticket.targetResolutionDate || "Within 24 Hours"}
+                          </span>
+                        </div>
+
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <button
+                            type="button"
+                            className="btn-secondary btn-sm"
+                            style={{ fontSize: "12px", padding: "5px 12px" }}
+                            onClick={() => handleOpenPurposeModal(ticket)}
+                          >
+                            🎯 Assign / Change Purpose
+                          </button>
+                          {totalSteps > 0 && (
+                            <button
+                              type="button"
+                              className="btn-outline-olive btn-sm"
+                              style={{ fontSize: "12px", padding: "5px 12px" }}
+                              onClick={() => toggleExpandChecklist(ticket.id)}
+                            >
+                              {isExpanded ? "▲ Hide Action Plan" : `▼ Action Steps (${completedSteps}/${totalSteps})`}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {ticket.resolutionNotes && (
+                        <div style={{ fontSize: "12.5px", color: "var(--text-body)", marginTop: "8px", fontStyle: "italic" }}>
+                          Objective: {ticket.resolutionNotes}
+                        </div>
+                      )}
+
+                      {totalSteps > 0 && (
+                        <div className="purpose-progress-wrap" style={{ marginTop: "10px" }}>
+                          <div className="purpose-progress-track">
+                            <div className="purpose-progress-fill" style={{ width: `${pct}%` }}></div>
+                          </div>
+                          <span style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--olive-900)", minWidth: "95px" }}>
+                            {completedSteps}/{totalSteps} Done ({pct}%)
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Expandable Action Steps Checklist */}
+                      {isExpanded && totalSteps > 0 && (
+                        <div className="purpose-checklist-box">
+                          <div style={{ fontSize: "12px", fontWeight: 700, color: "var(--olive-900)", marginBottom: "6px" }}>
+                            Action Checklist for this Purpose (Click checkbox to update progress):
+                          </div>
+                          {plan.map((step, sIdx) => (
+                            <div key={step.id || sIdx} className={`purpose-step-item ${step.completed ? "completed" : ""}`}>
+                              <label style={{ display: "flex", alignItems: "center", cursor: "pointer", margin: 0, textTransform: "none" }}>
+                                <input
+                                  type="checkbox"
+                                  className="purpose-step-checkbox"
+                                  checked={!!step.completed}
+                                  onChange={() => handleToggleCardStep(ticket.id, sIdx)}
+                                />
+                                <span>{step.text}</span>
+                              </label>
+                              <span style={{ fontSize: "11px", fontWeight: 700, color: step.completed ? "#16a34a" : "var(--olive-600)" }}>
+                                {step.completed ? "✓ Completed" : "Pending"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 {/* Canned Templates & AI Agent Reply Assistant */}
                 <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: "1px solid var(--beige-200)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "8px" }}>
@@ -513,6 +717,201 @@ export default function ManageTickets() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Purpose Assignment Modal Dialog */}
+      {activePurposeTicket && (
+        <div className="purpose-modal-backdrop" onClick={() => setActivePurposeTicket(null)}>
+          <div className="purpose-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
+              <div>
+                <span className="hero-pill-badge" style={{ marginBottom: "6px" }}>🎯 Goal-Driven Resolution</span>
+                <h2 style={{ fontSize: "22px", color: "var(--olive-950)", margin: "4px 0" }}>
+                  Assign Resolution Purpose & Action Plan
+                </h2>
+                <p style={{ fontSize: "13px", color: "var(--text-muted)", margin: 0 }}>
+                  Ticket #{activePurposeTicket.id} • {activePurposeTicket.subject}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn-secondary btn-sm"
+                onClick={() => setActivePurposeTicket(null)}
+                style={{ padding: "6px 12px" }}
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            {/* Quick Presets Picker */}
+            <div style={{ marginBottom: "18px" }}>
+              <label style={{ fontSize: "12.5px", fontWeight: 700, color: "var(--olive-900)", marginBottom: "8px", display: "block" }}>
+                Choose Pre-configured Resolution Purpose:
+              </label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                {RESOLUTION_PURPOSES.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    className={`ai-chip-button ${modalPurposeName === preset.name ? "active" : ""}`}
+                    style={{
+                      backgroundColor: modalPurposeName === preset.name ? "var(--olive-700)" : "var(--beige-100)",
+                      color: modalPurposeName === preset.name ? "#ffffff" : "var(--olive-950)",
+                      borderColor: modalPurposeName === preset.name ? "var(--olive-800)" : "var(--beige-400)"
+                    }}
+                    onClick={() => handleSelectPresetPurpose(preset.name)}
+                  >
+                    <span>{preset.icon}</span> {preset.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom Purpose Input */}
+            <div className="form-group-item">
+              <label style={{ fontSize: "12.5px", fontWeight: 700, color: "var(--text-main)", marginBottom: "4px", display: "block" }}>
+                Resolution Purpose Title:
+              </label>
+              <input
+                type="text"
+                value={modalPurposeName}
+                onChange={(e) => setModalPurposeName(e.target.value)}
+                placeholder="e.g. Refund & Financial Ledger Adjustment"
+                style={{ fontSize: "13.5px" }}
+              />
+            </div>
+
+            {/* Specialist & Target SLA Grid */}
+            <div className="form-grid-2" style={{ marginBottom: "18px" }}>
+              <div>
+                <label style={{ fontSize: "12.5px", fontWeight: 700, color: "var(--text-main)", marginBottom: "4px", display: "block" }}>
+                  Assigned Specialist:
+                </label>
+                <select
+                  value={modalAssignedTo}
+                  onChange={(e) => setModalAssignedTo(e.target.value)}
+                  style={{ fontSize: "13px" }}
+                >
+                  {staffMembers.map((staff) => (
+                    <option key={staff} value={staff}>{staff}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: "12.5px", fontWeight: 700, color: "var(--text-main)", marginBottom: "4px", display: "block" }}>
+                  Resolution Target SLA:
+                </label>
+                <select
+                  value={modalTargetDate}
+                  onChange={(e) => setModalTargetDate(e.target.value)}
+                  style={{ fontSize: "13px" }}
+                >
+                  <option value="Within 4 Hours">Within 4 Hours (Critical / Security)</option>
+                  <option value="Within 12 Hours">Within 12 Hours (High Priority)</option>
+                  <option value="Within 24 Hours">Within 24 Hours (Standard Investigation)</option>
+                  <option value="Within 48 Hours">Within 48 Hours (General Onboarding)</option>
+                  <option value="Resolved">Already Resolved</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Purpose Notes */}
+            <div className="form-group-item">
+              <label style={{ fontSize: "12.5px", fontWeight: 700, color: "var(--text-main)", marginBottom: "4px", display: "block" }}>
+                Resolution Objective / Context Notes:
+              </label>
+              <textarea
+                value={modalNotes}
+                onChange={(e) => setModalNotes(e.target.value)}
+                placeholder="Brief internal instructions or target goal for resolving this ticket..."
+                style={{ minHeight: "75px", fontSize: "13px" }}
+              />
+            </div>
+
+            {/* Action Steps Checklist Editor */}
+            <div style={{ marginBottom: "24px" }}>
+              <label style={{ fontSize: "12.5px", fontWeight: 700, color: "var(--olive-900)", marginBottom: "8px", display: "block" }}>
+                Action Steps Checklist ({modalSteps.length} steps):
+              </label>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "10px" }}>
+                {modalSteps.map((step, idx) => (
+                  <div
+                    key={step.id || idx}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "10px",
+                      background: "var(--beige-50)",
+                      padding: "8px 12px",
+                      borderRadius: "var(--radius-md)",
+                      border: "1px solid var(--border-color)",
+                      fontSize: "13px"
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ color: "var(--olive-700)", fontWeight: 700 }}>{idx + 1}.</span>
+                      <span>{step.text}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveModalStep(idx)}
+                      style={{ background: "transparent", color: "#dc2626", padding: "2px 6px", fontSize: "12px" }}
+                      title="Remove step"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Add custom step input */}
+              <div style={{ display: "flex", gap: "8px" }}>
+                <input
+                  type="text"
+                  placeholder="Add custom action step to resolve this..."
+                  value={newStepInput}
+                  onChange={(e) => setNewStepInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddModalStep();
+                    }
+                  }}
+                  style={{ fontSize: "13px", marginBottom: 0 }}
+                />
+                <button
+                  type="button"
+                  className="btn-secondary btn-sm"
+                  onClick={handleAddModalStep}
+                  style={{ flexShrink: 0 }}
+                >
+                  + Add Step
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", paddingTop: "16px", borderTop: "1px solid var(--beige-200)" }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setActivePurposeTicket(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handleSavePurposeModal}
+              >
+                ✓ Save & Assign Purpose
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

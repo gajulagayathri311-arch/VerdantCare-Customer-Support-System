@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ticketService } from "../services/ticketService";
+import { ticketService, RESOLUTION_PURPOSES } from "../services/ticketService";
 import { useAuth } from "../context/AuthContext";
 import TicketTimeline from "../components/TicketTimeline";
 
@@ -81,6 +81,15 @@ export default function TicketDetails() {
     }
   };
 
+  const handleToggleStep = async (stepIndex) => {
+    try {
+      await ticketService.toggleActionStep(id, stepIndex);
+      await loadTicket();
+    } catch {
+      alert("Failed to update step progress.");
+    }
+  };
+
   if (loading) {
     return (
       <div className="page-wrapper animate-fade-in">
@@ -104,6 +113,14 @@ export default function TicketDetails() {
       </div>
     );
   }
+
+  const purposeName = ticket.resolutionPurpose || "General Triage & Investigation";
+  const preset = RESOLUTION_PURPOSES.find((p) => p.name === purposeName);
+  const purposeIcon = preset ? preset.icon : "🎯";
+  const plan = ticket.resolutionPlan || [];
+  const completedSteps = plan.filter((s) => s.completed).length;
+  const totalSteps = plan.length;
+  const stepPercent = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
 
   return (
     <div className="page-wrapper animate-fade-in">
@@ -176,6 +193,65 @@ export default function TicketDetails() {
         <div style={{ marginTop: "24px" }}>
           <TicketTimeline status={ticket.status} />
         </div>
+      </div>
+
+      {/* Assigned Resolution Purpose & Purpose-Driven Action Plan Card */}
+      <div className="card-surface" style={{ padding: "24px 28px", marginBottom: "24px", borderLeft: "4px solid var(--olive-600)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "12px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <span className="purpose-badge purpose-badge-lg">
+              <span className="purpose-badge-icon">{purposeIcon}</span>
+              <span>Assigned Resolution Purpose: <strong>{purposeName}</strong></span>
+            </span>
+            <span style={{ fontSize: "12.5px", background: "var(--olive-100)", color: "var(--olive-900)", padding: "4px 10px", borderRadius: "var(--radius-full)", fontWeight: 700 }}>
+              ⏱️ Target SLA: {ticket.targetResolutionDate || "Within 24 Hours"}
+            </span>
+          </div>
+
+          <div style={{ fontSize: "13px", color: "var(--text-muted)" }}>
+            Specialist in Charge: <strong>{ticket.assignedTo || "Support Lead"}</strong>
+          </div>
+        </div>
+
+        {ticket.resolutionNotes && (
+          <div style={{ fontSize: "13.5px", color: "var(--text-body)", marginBottom: "14px", background: "var(--beige-100)", padding: "10px 16px", borderRadius: "var(--radius-md)" }}>
+            <strong>Resolution Objective:</strong> {ticket.resolutionNotes}
+          </div>
+        )}
+
+        {totalSteps > 0 && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12.5px", fontWeight: 700, color: "var(--olive-950)", marginBottom: "4px" }}>
+              <span>Action Plan Progress:</span>
+              <span>{completedSteps} of {totalSteps} Steps Executed ({stepPercent}%)</span>
+            </div>
+            <div className="purpose-progress-wrap">
+              <div className="purpose-progress-track">
+                <div className="purpose-progress-fill" style={{ width: `${stepPercent}%` }}></div>
+              </div>
+            </div>
+
+            <div className="purpose-checklist-box" style={{ marginTop: "12px" }}>
+              {plan.map((step, idx) => (
+                <div key={step.id || idx} className={`purpose-step-item ${step.completed ? "completed" : ""}`}>
+                  <label style={{ display: "flex", alignItems: "center", cursor: user?.role === "ADMIN" ? "pointer" : "default", margin: 0, textTransform: "none" }}>
+                    <input
+                      type="checkbox"
+                      className="purpose-step-checkbox"
+                      checked={!!step.completed}
+                      disabled={user?.role !== "ADMIN"}
+                      onChange={() => handleToggleStep(idx)}
+                    />
+                    <span>{step.text}</span>
+                  </label>
+                  <span style={{ fontSize: "11px", fontWeight: 700, color: step.completed ? "#16a34a" : "var(--olive-600)" }}>
+                    {step.completed ? "✓ Completed" : (user?.role === "ADMIN" ? "Click to Mark Done" : "In Progress")}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Main Conversation Thread */}

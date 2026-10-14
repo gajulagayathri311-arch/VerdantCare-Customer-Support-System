@@ -18,26 +18,33 @@ const dbConfig = {
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  multipleStatements: true
+  multipleStatements: true,
+  ssl: process.env.DB_SSL === "true" || process.env.MYSQL_SSL === "true" ? { rejectUnauthorized: false } : undefined
 };
 
 let pool;
 
 export async function initializeDatabase() {
   try {
-    // 1. Connect to MySQL server to ensure database exists
-    const rootConnection = await mysql.createConnection({
-      host: dbConfig.host,
-      user: dbConfig.user,
-      password: dbConfig.password,
-      port: dbConfig.port,
-      multipleStatements: true
-    });
+    // 1. Try to ensure database exists (for local development)
+    try {
+      const rootConnection = await mysql.createConnection({
+        host: dbConfig.host,
+        user: dbConfig.user,
+        password: dbConfig.password,
+        port: dbConfig.port,
+        multipleStatements: true,
+        ssl: dbConfig.ssl
+      });
 
-    await rootConnection.query(
-      `CREATE DATABASE IF NOT EXISTS \`${dbConfig.database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`
-    );
-    await rootConnection.end();
+      await rootConnection.query(
+        `CREATE DATABASE IF NOT EXISTS \`${dbConfig.database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`
+      );
+      await rootConnection.end();
+    } catch {
+      // Cloud databases provide pre-allocated databases and disallow CREATE DATABASE
+      console.log("ℹ️ Cloud database mode: using pre-allocated database schema.");
+    }
 
     // 2. Initialize connection pool
     pool = mysql.createPool(dbConfig);

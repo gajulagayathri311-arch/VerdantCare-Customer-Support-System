@@ -1,7 +1,21 @@
 import axios from "axios";
 
+// Determine the live backend URL
+const envUrl = import.meta.env.VITE_API_URL;
+const isLocalhost =
+  typeof window !== "undefined" &&
+  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+
+// If VITE_API_URL is missing or contains the example placeholder 'verdantcare-backend.onrender.com'
+const targetBaseURL =
+  envUrl && !envUrl.includes("verdantcare-backend.onrender.com")
+    ? envUrl
+    : isLocalhost
+    ? "http://localhost:8080/api"
+    : "https://verdantcare-customer-support-system.onrender.com/api";
+
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:8080/api"
+  baseURL: targetBaseURL
 });
 
 // Attach JWT token to all outgoing requests

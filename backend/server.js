@@ -27,6 +27,24 @@ app.use((req, res, next) => {
   next();
 });
 
+// Root & API welcome check
+app.get(["/", "/api"], (req, res) => {
+  res.json({
+    status: "online",
+    system: "VerdantCare Customer Support Management API",
+    version: "1.0.0",
+    database: "MySQL 8.0+",
+    endpoints: {
+      health: "/api/health",
+      auth: "/api/auth",
+      tickets: "/api/tickets",
+      knowledgeBase: "/api/kb"
+    },
+    documentation: "https://github.com/gajulagayathri311-arch/VerdantCare-Customer-Support-System",
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Health check
 app.get("/api/health", (req, res) => {
   res.json({
